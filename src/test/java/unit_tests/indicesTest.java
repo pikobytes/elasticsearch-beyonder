@@ -237,19 +237,7 @@ public class indicesTest {
         return new ObjectMapper().readTree(responseString).get(index);
     }
 
-    private void createIndexWithSettings(RestClient client, String index, String settings, boolean force) throws Exception {
-        if (force && isIndexExist(client, index)) {
-            logger.debug("Index [{}] already exists but force set to true. Removing all data!", index);
-            removeIndexInElasticsearch(client, index);
-        }
-        if (force || !isIndexExist(client, index)) {
-            logger.debug("Index [{}] doesn't exist. Creating it.", index);
-            createIndexWithSettingsInElasticsearch(client, index, settings);
-        } else {
-            logger.debug("Index [{}] already exists.", index);
-        }
-    }
-
+    // Does not changed from the original function. Copied here for local use
     private void removeIndexInElasticsearch(RestClient client, String index) throws Exception {
         logger.trace("removeIndex([{}])", index);
 
@@ -265,6 +253,7 @@ public class indicesTest {
         logger.trace("/removeIndex([{}])", index);
     }
 
+    // Does not changed from the original function. Copied here for local use
     private void createIndexWithSettingsInElasticsearch(RestClient client, String index, String settings) throws Exception {
         logger.trace("createIndex([{}])", index);
 
