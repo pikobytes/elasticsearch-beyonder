@@ -1,0 +1,14 @@
+{
+  "mappings": {
+    "properties": {
+      "message": {
+        "type": "text",
+        "store": true
+      },
+      "language": {
+        "type": "keyword",
+        "store": true
+      }
+    }
+  }
+}

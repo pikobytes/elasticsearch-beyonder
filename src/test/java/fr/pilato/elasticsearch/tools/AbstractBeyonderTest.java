@@ -47,7 +47,7 @@ public abstract class AbstractBeyonderTest {
 
     static final Logger logger = LoggerFactory.getLogger(AbstractBeyonderTest.class);
 
-    private final static String DEFAULT_TEST_CLUSTER = "http://127.0.0.1:9400";
+    private final static String DEFAULT_TEST_CLUSTER = "http://127.0.0.1:9200";
     private final static Integer DEFAULT_TEST_CLUSTER_TRANSPORT_PORT = 9500;
 
     final static String testCluster = System.getProperty("tests.cluster", DEFAULT_TEST_CLUSTER);
@@ -61,7 +61,7 @@ public abstract class AbstractBeyonderTest {
 
     private static RestClient client;
 
-    static RestClient restClient() throws IOException {
+    public static RestClient restClient() throws IOException {
         if (client == null) {
             startRestClient();
         }

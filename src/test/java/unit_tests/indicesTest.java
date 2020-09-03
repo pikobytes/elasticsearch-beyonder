@@ -1,5 +1,8 @@
 package unit_tests;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.pilato.elasticsearch.tools.SettingsFinder;
 import fr.pilato.elasticsearch.tools.SettingsReader;
 import jdk.nashorn.internal.runtime.ECMAException;
@@ -54,7 +57,7 @@ public class indicesTest {
      */
     @Test
     public void testMissingIndex() throws Exception {
-        String path = "src/test/random_directory";
+        String path = "src/test/external_directory/random_directory";
         String missingIndex = "missing_index";
         // check if missing_index already exists
         Assert.assertFalse("The index {" + missingIndex + "} exists already", isIndexExist(client, missingIndex));
@@ -69,9 +72,12 @@ public class indicesTest {
 
     }
 
+    /**
+     * For force_create, the force parameter need be true
+     */
     @Test
     public void testForceCreate() throws Exception {
-        String path = "src/test/random_directory";
+        String path = "src/test/external_directory/random_directory";
         String forceIndex = "force_index";
         Date firstCreationDate, secondCreationDate;
 
@@ -90,13 +96,10 @@ public class indicesTest {
         secondCreationDate = getCreationDate(client, forceIndex);
         // check, if there was created a new index
         Assert.assertTrue(secondCreationDate.after(firstCreationDate));
-
         // delete it
         removeIndexInElasticsearch(client, forceIndex);
         // check if the index was deleted
         Assert.assertFalse("The index {" + forceIndex + "} was not deleted", isIndexExist(client, forceIndex));
-
-
     }
 
 
@@ -106,41 +109,35 @@ public class indicesTest {
         return new Date(Long.parseLong(creationDate));
     }
 
-    @Test
-    public void testIndexProperties() throws Exception {
-        String index = "twitter";
-        //Response response = client.performRequest(new Request("GET", "/" + index + "/_mapping?pretty" ));
-        Response response = client.performRequest(new Request("GET", "/_cat/indices/twitter?h=creation.date"));
-        String creationDate = EntityUtils.toString(response.getEntity());
-        System.out.println();
-    }
 
     @Test
-    public void testConvertTimestamp() {
-        // 03/09/2020
-        String creationTime1 = "1599120412343";
-        Date date1 = new Date(Long.parseLong(creationTime1));
+    public void testReplaceIfChanged() throws Exception {
+        String index = "index_replace_test";
+        String path1 = "src/test/external_directory/index_1";
+        String path2 = "src/test/external_directory/index_2";
+        Date firstCreationDate, secondCreationDate;
 
-        //01/09/2020
-        String creationTime2 = "1598918400000";
-        Date date2 = new Date(Long.parseLong(creationTime2));
 
-        System.out.println();
-
-        Assert.assertTrue(date2.before(date1));
-
+        //check if exists
+        Assert.assertFalse("The index {" + index + "} exists already", isIndexExist(client, index));
+        // create index
+        modifiedStart(client, path1, index, false);
+        // check existence
+        Assert.assertTrue("The index {" + index + "} was not created", isIndexExist(client, index));
+        // get timestamp
+        firstCreationDate = getCreationDate(client, index);
+        // create new index with different mapping (same name)
+        modifiedStart(client, path2, index, false);
+        //get second timestamp
+        secondCreationDate = getCreationDate(client, index);
+        // check, if the mappings was replaced
+        Assert.assertTrue(secondCreationDate.after(firstCreationDate));
+        // delete it
+        removeIndexInElasticsearch(client, index);
+        // check if the index was deleted
+        Assert.assertFalse("The index {" + index + "} was not deleted", isIndexExist(client, index));
     }
 
-    @Test
-    public void testExistingIndex() {
-        String path = "src/test/random_directory";
-        String existingIndex = "missing_index";
-/*
-        try {
-            start(client, path, );
-        }
-*/
-    }
 
     /**
      * overwritten version of start(). Instead of getting the settings from the resource directory,
@@ -169,12 +166,12 @@ public class indicesTest {
 
             Objects.requireNonNull(settings);
             settings = StringSubstitutor.replace(settings, System.getenv());
-            createIndexWithSettings(client, index, settings, force);
+            createIndexWithSettingsModified(client, index, settings, force);
         }
     }
 
     /**
-     * @return List of files with the name _settings.json
+     * @return List of absolut paths of "_settings.json" files.
      * @throws NullPointerException if path is invalid
      */
     private List<String> getSettingFiles(String path) throws NullPointerException {
@@ -194,6 +191,51 @@ public class indicesTest {
         return validPaths;
     }
 
+    /**
+     * create index with few cases.
+     * 1. Create if the index doesn't exists
+     * 2. Force creation, if force set to true
+     * 3. Replace the existing index, if the mappings are different
+     *
+     * @param client   Elasticsearch client
+     * @param index    Index name
+     * @param settings Settings if any, null if no specific settings
+     * @param force    Remove index if exists (Warning: remove all data)
+     * @throws Exception if the elasticsearch API call is failing
+     */
+    private void createIndexWithSettingsModified(RestClient client, String index, String settings, boolean force) throws Exception {
+        if (force && isIndexExist(client, index)) {
+            logger.debug("Index [{}] already exists but force set to true. Removing all data!", index);
+            removeIndexInElasticsearch(client, index);
+        }
+        if (force || !isIndexExist(client, index)) {
+            // exists and force_create
+            logger.debug("Index [{}] doesn't exist. Creating it.", index);
+            createIndexWithSettingsInElasticsearch(client, index, settings);
+        } else {
+            JsonNode newMappingsNode = new ObjectMapper().readTree(settings);
+            JsonNode existingMappingNode = getMappingNodeFromExitingIndex(index);
+            // get the existing mapping and compare with the new mapping -> the function return boolean
+            // if exists and difference -> change
+            if (!newMappingsNode.equals(existingMappingNode)) {
+                logger.debug("Index [{}] exist, but the mapping is different. Changing it.", index);
+                removeIndexInElasticsearch(client, index);
+                createIndexWithSettingsInElasticsearch(client, index, settings);
+            } else {
+                logger.debug("Index [{}] already exists and no difference between the old and the new mappings.", index);
+            }
+        }
+    }
+
+    /**
+     * @return mapping node from an existing index
+     * @throws Exception if the index doesn't exists or it has an invalid valid format
+     */
+    private JsonNode getMappingNodeFromExitingIndex(String index) throws Exception {
+        Response response = client.performRequest(new Request("GET", "/" + index + "/_mapping/"));
+        String responseString = EntityUtils.toString(response.getEntity()).trim();
+        return new ObjectMapper().readTree(responseString).get(index);
+    }
 
     private void createIndexWithSettings(RestClient client, String index, String settings, boolean force) throws Exception {
         if (force && isIndexExist(client, index)) {
@@ -245,5 +287,6 @@ public class indicesTest {
 
         logger.trace("/createIndex([{}])", index);
     }
+
 
 }
