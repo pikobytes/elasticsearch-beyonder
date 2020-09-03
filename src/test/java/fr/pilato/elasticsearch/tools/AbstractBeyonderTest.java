@@ -61,7 +61,7 @@ public abstract class AbstractBeyonderTest {
 
     private static RestClient client;
 
-    static RestClient restClient() throws IOException {
+    public static RestClient restClient() throws IOException {
         if (client == null) {
             startRestClient();
         }
@@ -121,18 +121,18 @@ public abstract class AbstractBeyonderTest {
     @Test
     public void testVariableReplacement() throws Exception {
 
-      // given: A settings json with a variable that should be replaced.
-      //        And an environment variable with matching name (set in configuration of maven-surefire-plugin).
-      String folder = "models/variablereplacement";
-      String indexName = "twitter";
+        // given: A settings json with a variable that should be replaced.
+        //        And an environment variable with matching name (set in configuration of maven-surefire-plugin).
+        String folder = "models/variablereplacement";
+        String indexName = "twitter";
 
-      // when: this settings file is read
-      String settings = IndexSettingsReader.readSettings(folder, indexName);
-      Map<String, Object> settingsMap = JsonUtil.asMap(new ByteArrayInputStream(settings.getBytes()));
+        // when: this settings file is read
+        String settings = IndexSettingsReader.readSettings(folder, indexName);
+        Map<String, Object> settingsMap = JsonUtil.asMap(new ByteArrayInputStream(settings.getBytes()));
 
-      // then: the variables got replaced by environment variables of the same name
-      String numberOfReplicas = (String) ((Map) settingsMap.get("settings")).get("number_of_replicas");
-      assumeThat(numberOfReplicas, equalTo("2"));
+        // then: the variables got replaced by environment variables of the same name
+        String numberOfReplicas = (String) ((Map) settingsMap.get("settings")).get("number_of_replicas");
+        assumeThat(numberOfReplicas, equalTo("2"));
 
     }
 
