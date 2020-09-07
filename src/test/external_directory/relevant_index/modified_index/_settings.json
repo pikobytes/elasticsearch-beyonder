@@ -1,0 +1,110 @@
+{
+  "settings": {
+    "analysis": {
+      "normalizer": {
+        "keyword_lowercase": {
+          "type": "custom"
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "network_code": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": true
+      },
+      "device_code": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": true
+      },
+      "sensor_code": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": true
+      },
+      "geometry": {
+        "type": "geo_point",
+        "index": true
+      },
+      "uom": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": true
+      },
+      "sampl_interval_iso": {
+        "type": "keyword",
+        "index": false
+      },
+      "sens_interval_iso": {
+        "type": "keyword",
+        "index": false
+      },
+      "sampl_interval_seconds": {
+        "type": "long",
+        "index": true
+      },
+      "sensor_name": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": false
+      },
+      "topic": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": true
+      },
+      "measured_property": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": true
+      },
+      "min_date_time_iso": {
+        "type": "date",
+        "index": true
+      },
+      "max_date_time_iso": {
+        "type": "date",
+        "index": true
+      },
+      "substance": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": true
+      },
+      "phenomenon": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": true
+      },
+      "is_forecast": {
+        "type": "boolean",
+        "index": true
+      },
+      "location_hash": {
+        "type": "keyword",
+        "index": true
+      },
+      "tags": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": true
+      },
+      "time_range": {
+        "type": "long_range",
+        "index": true
+      },
+      "value_count": {
+        "type": "long",
+        "index": true
+      },
+      "value_aggregation": {
+        "type": "keyword",
+        "normalizer": "keyword_lowercase",
+        "index": true
+      }
+    }
+  }
+}

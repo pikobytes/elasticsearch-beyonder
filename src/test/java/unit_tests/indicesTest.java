@@ -2,6 +2,7 @@ package unit_tests;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import fr.pilato.elasticsearch.tools.SettingsFinder;
 import fr.pilato.elasticsearch.tools.SettingsReader;
 import org.apache.commons.io.IOUtils;
@@ -21,10 +22,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 
 import static fr.pilato.elasticsearch.tools.AbstractBeyonderTest.restClient;
 import static fr.pilato.elasticsearch.tools.index.IndexElasticsearchUpdater.isIndexExist;
@@ -32,7 +31,10 @@ import static fr.pilato.elasticsearch.tools.index.IndexElasticsearchUpdater.isIn
 public class indicesTest {
     private static RestClient client;
     private static final Logger logger = LoggerFactory.getLogger(SettingsReader.class);
-
+    /**
+     * Includes the settings that must be validated
+     */
+    private static final ArrayList<String> RELEVANT_SETTINGS = new ArrayList<>(Collections.singletonList("analysis"));
 
     @BeforeClass
     public static void startElasticsearchRestClient() throws IOException {
@@ -142,6 +144,43 @@ public class indicesTest {
     }
 
 
+    @Test
+    public void testUpdateIndexWithRelevantIndex() throws Exception {
+        String index = "relevant_index";
+        String path1 = "/home/micahel/Work/elasticsearch-beyonder/src/test/external_directory/relevant_index/index";
+        String path2 = "/home/micahel/Work/elasticsearch-beyonder/src/test/external_directory/relevant_index/modified_index";
+        Date firstCreationDate, secondCreationDate, thirdCreationDate;
+
+        //check if index exists
+        Assert.assertFalse("The index {" + index + "} exists already", isIndexExist(client, index));
+        // create index
+        modifiedStart(client, path1, index, false);
+        // check existence
+        Assert.assertTrue("The index {" + index + "} was not created", isIndexExist(client, index));
+        // get timestamp of the first creation
+        firstCreationDate = getCreationDate(client, index);
+        // create new index with same mapping (same name)
+        modifiedStart(client, path1, index, false);
+        //get second timestamp
+        secondCreationDate = getCreationDate(client, index);
+        // check, if the mappings are equal
+        Assert.assertEquals(firstCreationDate, secondCreationDate);
+        // update the index with different settings
+        modifiedStart(client, path2, index, false);
+        //get second timestamp
+        thirdCreationDate = getCreationDate(client, index);
+        // check, if the mappings was replaced
+        Assert.assertTrue(thirdCreationDate.after(firstCreationDate));
+        // delete it
+        removeIndexInElasticsearch(client, index);
+        // check if the index was deleted
+        Assert.assertFalse("The index {" + index + "} was not deleted", isIndexExist(client, index));
+
+    }
+
+
+
+
     /**
      * overwritten version of start(). Instead of getting the settings from the resource directory,
      * the user can choose any directory where _settings.json files are located.
@@ -159,10 +198,7 @@ public class indicesTest {
             String settings = null;
             // Create index
             try (InputStream asStream = new FileInputStream(settingFile)) {
-                if (asStream == null) {
-                    logger.trace("Can not find [{}] in class loader.", settingFile);
-                }
-                settings = IOUtils.toString(asStream, "UTF-8");
+                settings = IOUtils.toString(asStream, StandardCharsets.UTF_8);
             } catch (IOException e) {
                 logger.warn("Can not read [{}].", settingFile);
             }
@@ -216,11 +252,14 @@ public class indicesTest {
             logger.debug("Index [{}] doesn't exist. Creating it.", index);
             createIndexWithSettingsInElasticsearch(client, index, settings);
         } else {
-            JsonNode newMappingsNode = new ObjectMapper().readTree(settings);
-            JsonNode existingMappingNode = getMappingNodeFromExitingIndex(index);
+            JsonNode nodeFromFile = new ObjectMapper().readTree(settings);
+            JsonNode modifiedMappingFormFile = modifyJsonNode(nodeFromFile.get("mappings"));
+
+            JsonNode settingsFromES = getSettingsNodeFromExistingIndex(index);
+            JsonNode mappingsFromES = getMappingNodeFromExistingIndex(index);
             // get the existing mapping and compare with the new mapping -> the function return boolean
             // if exists and difference -> change
-            if (!newMappingsNode.equals(existingMappingNode)) {
+            if (!nodeFromFile.path("mappings").equals(mappingsFromES) || !compareSettings(RELEVANT_SETTINGS, nodeFromFile.path("settings"), settingsFromES)) {
                 logger.debug("Index [{}] exist, but the mapping is different. Changing it.", index);
                 removeIndexInElasticsearch(client, index);
                 createIndexWithSettingsInElasticsearch(client, index, settings);
@@ -230,15 +269,54 @@ public class indicesTest {
         }
     }
 
+    public boolean compareSettings(List<String> relevantSettings, JsonNode settingsFile, JsonNode settingsES) {
+
+        for (String setting : relevantSettings) {
+            if (!settingsFile.path(setting).equals(settingsES.path(setting))) {
+                logger.warn("The setting [{}] is different. Settings are not equal.", setting);
+                return false;
+            }
+        }
+        logger.trace("The settings are equal.");
+        return true;
+    }
+
     /**
      * @return mapping node from an existing index
-     * @throws Exception if the index doesn't exists or it has an invalid valid format
+     * @throws Exception if the index doesn't exists or it has an invalid format
      */
-    private JsonNode getMappingNodeFromExitingIndex(String index) throws Exception {
+    private JsonNode getMappingNodeFromExistingIndex(String index) throws Exception {
         Response response = client.performRequest(new Request("GET", "/" + index + "/_mapping/"));
         String responseString = EntityUtils.toString(response.getEntity()).trim();
-        return new ObjectMapper().readTree(responseString).get(index);
+        return new ObjectMapper().readTree(responseString).path(index).path("mappings");
     }
+
+    /**
+     * @return settings node from an existing index
+     * @throws Exception if the index doesn't exists or it has an invalid format
+     */
+    private JsonNode getSettingsNodeFromExistingIndex(String index) throws Exception {
+        Response response = client.performRequest(new Request("GET", "/" + index + "/_settings/index.analysis*"));
+        String responseString = EntityUtils.toString(response.getEntity()).trim();
+        return new ObjectMapper().readTree(responseString).path(index).path("settings").path("index");
+    }
+
+    /**
+     * Because the mappings are modified by ES, the original need to be modified too just for comparison.
+     *
+     * @return JsonNode without the fields like "index:true"
+     */
+    private JsonNode modifyJsonNode(JsonNode mappingsNode) {
+        for (JsonNode o : mappingsNode.get("properties")) {
+            JsonNode indexNode = o.path("index");
+
+            if (indexNode.isBoolean() && indexNode.asBoolean()) {
+                ((ObjectNode) o).remove("index");
+            }
+        }
+        return mappingsNode;
+    }
+
 
     // Does not changed from the original function. Copied here for local use
     private void removeIndexInElasticsearch(RestClient client, String index) throws Exception {
