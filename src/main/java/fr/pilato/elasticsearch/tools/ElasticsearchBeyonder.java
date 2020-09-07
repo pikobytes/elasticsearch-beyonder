@@ -185,9 +185,8 @@ public class ElasticsearchBeyonder {
      * @param index arbitrary index name
      * @throws Exception when beyonder can not start
      */
-    public static void start(RestClient client, String path, String index) throws Exception {
+    public static void modifiedStart(RestClient client, String path, String index) throws Exception {
         List<String> settingFiles = getSettingFiles(path);
-        //String settingFile1 = settingFiles.get(0);
         for(String settingFile : settingFiles) {
             String settings = null;
             // Create index
