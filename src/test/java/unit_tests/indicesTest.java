@@ -1,20 +1,15 @@
 package unit_tests;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.pilato.elasticsearch.tools.SettingsFinder;
 import fr.pilato.elasticsearch.tools.SettingsReader;
-import jdk.nashorn.internal.runtime.ECMAException;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.text.StringSubstitutor;
 import org.apache.http.util.EntityUtils;
-import org.elasticsearch.action.admin.indices.get.GetIndexRequest;
-import org.elasticsearch.action.admin.indices.get.GetIndexResponse;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
-import org.elasticsearch.common.io.stream.StreamInput;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -115,7 +110,7 @@ public class indicesTest {
         String index = "index_replace_test";
         String path1 = "src/test/external_directory/index_1";
         String path2 = "src/test/external_directory/index_2";
-        Date firstCreationDate, secondCreationDate;
+        Date firstCreationDate, secondCreationDate, thirdCreationDate;
 
 
         //check if exists
@@ -132,10 +127,18 @@ public class indicesTest {
         secondCreationDate = getCreationDate(client, index);
         // check, if the mappings was replaced
         Assert.assertTrue(secondCreationDate.after(firstCreationDate));
+        // create the same index with same mapping
+        modifiedStart(client, path2, index, false);
+        //get third timestamp
+        thirdCreationDate = getCreationDate(client, index);
+        // check if the timestamps are equal
+        Assert.assertEquals(secondCreationDate, thirdCreationDate);
         // delete it
         removeIndexInElasticsearch(client, index);
         // check if the index was deleted
         Assert.assertFalse("The index {" + index + "} was not deleted", isIndexExist(client, index));
+
+
     }
 
 
