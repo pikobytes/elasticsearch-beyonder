@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>fr.pilato.elasticsearch</groupId>
@@ -9,8 +10,8 @@
     <name>Elasticsearch Beyonder</name>
     <url>https://github.com/dadoonet/elasticsearch-beyonder</url>
     <description>
-Elasticsearch beyonder provides automatic index, mapping, alias or template creation
-when an elasticsearch client starts.
+        Elasticsearch beyonder provides automatic index, mapping, alias or template creation
+        when an elasticsearch client starts.
     </description>
 
     <licenses>
@@ -48,7 +49,7 @@ when an elasticsearch client starts.
         <url>scm:git:git@github.com:dadoonet/elasticsearch-beyonder.git</url>
         <connection>scm:git:git@github.com:dadoonet/elasticsearch-beyonder.git</connection>
         <developerConnection>scm:git:git@github.com:dadoonet/elasticsearch-beyonder.git</developerConnection>
-      <tag>HEAD</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <issueManagement>
@@ -73,24 +74,36 @@ when an elasticsearch client starts.
             <id>elastic-download-service</id>
             <name>Elastic Download Service</name>
             <url>https://artifacts.elastic.co/maven/</url>
-            <releases><enabled>true</enabled></releases>
-            <snapshots><enabled>false</enabled></snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
 
         <repository>
             <id>oss-snapshots</id>
             <name>Sonatype OSS Snapshots</name>
             <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-            <releases><enabled>false</enabled></releases>
-            <snapshots><enabled>true</enabled></snapshots>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
 
         <repository>
             <id>elastic-snapshots</id>
             <name>Elastic Snapshots</name>
             <url>https://snapshots.elastic.co/maven/</url>
-            <releases><enabled>false</enabled></releases>
-            <snapshots><enabled>true</enabled></snapshots>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
         </repository>
     </repositories>
 
@@ -154,13 +167,13 @@ when an elasticsearch client starts.
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
             <version>${jackson.version}</version>
-            <scope>test</scope>
+            <scope>public</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
-            <scope>test</scope>
+            <scope>public</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -225,7 +238,9 @@ when an elasticsearch client starts.
                     </issueTypes>
                     <onlyCurrentVersion>true</onlyCurrentVersion>
                     <includeOpenIssues>true</includeOpenIssues>
-                    <urlDownload>https://repo1.maven.org/maven2/fr/pilato/elasticsearch/elasticsearch-beyonder/${project.version}/</urlDownload>
+                    <urlDownload>
+                        https://repo1.maven.org/maven2/fr/pilato/elasticsearch/elasticsearch-beyonder/${project.version}/
+                    </urlDownload>
                 </configuration>
             </plugin>
             <plugin>
